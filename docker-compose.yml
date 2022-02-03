@@ -1,0 +1,69 @@
+networks:
+  kafka-cluster:
+    name: kafka-cluster
+    driver: bridge
+
+services:
+  zookeeper:
+    image: zookeeper:${ZOOKEEPER_VERSION:-latest}
+    ports:
+      - '31000:31000'
+    environment:
+      ZOOKEEPER_CLIENT_PORT: ${ZOOKEEPER_PORT}
+      ZOOKEEPER_TICK_TIME: 2000
+      KAFKA_JMX_HOSTNAME: "localhost"
+      KAFKA_JMX_PORT: 31000
+    container_name: zookeeper
+    networks:
+      - kafka-cluster
+
+  kafka:
+    # "`-._,-'"`-._,-'"`-._,-'"`-._,-'"`-._,-'"`-._,-'"`-._,-'"`-._,-'"`-._,-
+    # An important note about accessing Kafka from clients on other machines:
+    # -----------------------------------------------------------------------
+    #
+    # The config used here exposes port 9092 for _external_ connections to the broker
+    # i.e. those from _outside_ the docker network. This could be from the host machine
+    # running docker, or maybe further afield if you've got a more complicated setup.
+    # If the latter is true, you will need to change the value 'localhost' in
+    # KAFKA_ADVERTISED_LISTENERS to one that is resolvable to the docker host from those
+    # remote clients
+    #
+    # For connections _internal_ to the docker network, such as from other services
+    # and components, use kafka:29092.
+    #
+    # See https://rmoff.net/2018/08/02/kafka-listeners-explained/ for details
+    # "`-._,-'"`-._,-'"`-._,-'"`-._,-'"`-._,-'"`-._,-'"`-._,-'"`-._,-'"`-._,-
+    #
+    image: bitnami/kafka:${KAFKA_VERSION:-latest}
+    ports:
+      - "9092:9092"
+      - "31001:31001"
+    expose:
+      - "9093"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_CFG_BROKER_ID: 1
+      KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:${ZOOKEEPER_PORT}
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CLIENT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: CLIENT # this config use for internal network
+      KAFKA_CFG_LISTENERS: CLIENT://kafka:9093,EXTERNAL://0.0.0.0:9092 # kafka internal and external listener
+      KAFKA_CFG_ADVERTISED_LISTENERS: CLIENT://kafka:9093,EXTERNAL://localhost:9092 # this config is used to get meta-data from broker that show how to connect and send data to it.
+      ALLOW_PLAINTEXT_LISTENER: yes # this config is ignored ssl for connection
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: true
+      KAFKA_ADVERTISED_HOST_NAME: localhost
+    container_name: kafka
+    networks:
+      - kafka-cluster
+  kafdrop:
+    image: obsidiandynamics/kafdrop:${KAFDROP_VERSION:-latest}
+    container_name: kafdrop
+    ports:
+      - 9000:9000
+    environment:
+      - KAFKA_BROKERCONNECT=kafka:9093
+    depends_on:
+      - kafka
+    networks:
+      - kafka-cluster
