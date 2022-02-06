@@ -11,7 +11,7 @@ spring:
   cloud:
     stream:
       function:
-        definition : orderSupplier;paymentEventConsumer
+        definition : orderSupplier;paymentEventConsumer # that contains a list of bindable functions. We need to pass the Supplier or Consumer method names divided by a semicolon
       bindings:
         orderSupplier-out-0:
           destination: order-event

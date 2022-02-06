@@ -53,6 +53,7 @@ services:
       ALLOW_PLAINTEXT_LISTENER: yes # this config is ignored ssl for connection
       KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: true
       KAFKA_ADVERTISED_HOST_NAME: localhost
+      KAFKA_CFG_NUM_PARTITIONS: 3
     container_name: kafka
     networks:
       - kafka-cluster
